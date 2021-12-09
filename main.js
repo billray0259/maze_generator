@@ -1,28 +1,30 @@
 
-const wallThickness = 4;
-const nGrid = 32;
+
+const nGrid = 64;
 const canvasSize = 768;
 const gridSize = canvasSize / nGrid;
+const wallThickness = gridSize/4;
 
-function setup() {
-    createCanvas(canvasSize, canvasSize);
-    background(100);
-
-    // set frame rate to 1
-    // frameRate(0.5);
-}
+const drawFast = false; // Draw the grid faster but with some minor errors
+const framesBetweenDraws = 1; // How many upates to perform between draws
 
 // a boolean grid of shape (64, 64, 3)
-const grid = new Array(nGrid).fill(true).map(() => new Array(nGrid).fill(true).map(() => [true, true, false]));
+const grid = new Array(nGrid).fill(true).map(() => new Array(nGrid).fill(true).map(() => [true, true, false, true]));
+const visited = new Stack();
+let current = {x: 0, y: 0};
+grid[0][0][0] = false;
 
 // grid[r][c][0] is the top edge of the square
 // grid[r][c][1] is the left edge of the square
 // grid[r][c][2] is if the cell has been visited
+// grid[r][c][3] is if the cell needs to be re-drawn
 
-function mousePressed() {
-    const x = floor((mouseX) / 8);
-    const y = floor((mouseY) / 8);
-    grid[x][y][0] = false;
+function setup() {
+    createCanvas(canvasSize, canvasSize);
+    background(255);
+
+    // frameRate(0.5);
+    frameRate(framesBetweenDraws*30);
 }
 
 function getNeighbors(x, y) {
@@ -43,80 +45,111 @@ function getNeighbors(x, y) {
     return neighbors.filter(neighbor => !grid[neighbor.x][neighbor.y][2]);
 }
 
-const visited = new Stack();
-let current = {x: 0, y: 0};
-grid[0][0][0] = false;
-
+function setRedraw(cell) {
+    grid[cell.x][cell.y][3] = true;
+    // also redraw the cell above and below
+    if (cell.y > 0) {
+        grid[cell.x][cell.y - 1][3] = true;
+    }
+    if (cell.y < nGrid - 1) {
+        grid[cell.x][cell.y + 1][3] = true;
+    }
+    // also redraw the cell to the left and right
+    if (cell.x > 0) {
+        grid[cell.x - 1][cell.y][3] = true;
+    }
+    if (cell.x < nGrid - 1) {
+        grid[cell.x + 1][cell.y][3] = true;
+    }
+}
 
 function updateEdges(current, neighbor) {
     // removes the edge between current and neighbor
     // if current is above neighbor remove the top edge of neighbor
     if (current.y < neighbor.y) {
         grid[neighbor.x][neighbor.y][0] = false;
+        setRedraw(neighbor);
     }
     // if neighbor is above current remove the top edge of current
     if (neighbor.y < current.y) {
         grid[current.x][current.y][0] = false;
+        setRedraw(current);
     }
     // if current is to the left of neighbor remove the left edge of neighbor
     if (current.x < neighbor.x) {
         grid[neighbor.x][neighbor.y][1] = false;
+        setRedraw(neighbor);
     }
     // if neighbor is to the left of current remove the left edge of current
     if (neighbor.x < current.x) {
         grid[current.x][current.y][1] = false;
+        setRedraw(current);
     }
 }
 
 function draw() {
-    background(255);
-    
-    for (let x = 0; x < nGrid; x++) {
-        for (let y = 0; y < nGrid; y++) {
-            
-            // if the cell has a top edge draw it
-            if (grid[x][y][0]) {
-                // draw the top edge of a square
-                stroke(0);
-                strokeWeight(wallThickness);
-                line(x * gridSize, y * gridSize, (x + 1) * gridSize, y * gridSize);
-            }
-            
-            // if the cell has a left edge draw it
-            if (grid[x][y][1]) {
-                // draw the left edge of a square
-                stroke(0);
-                strokeWeight(wallThickness);
-                line(x * gridSize, y * gridSize, x * gridSize, (y + 1) * gridSize);
-            }
+    if (frameCount % framesBetweenDraws === 0) {
+        if (!drawFast) {
+            background(255);
+        }
+        for (let x = 0; x < nGrid; x++) {
+            for (let y = 0; y < nGrid; y++) {
+                if (drawFast) {
+                    if (!grid[x][y][3]) {
+                        continue;
+                    } 
+                    
+                    grid[x][y][3] = false;
+                    // draw a white square
+                    noStroke();
+                    fill(255);
+                    rect(x * gridSize, y * gridSize, gridSize, gridSize);
+                }
 
-            // if the cell has all four both edges fill it in
-            const topEdge = grid[x][y][0];
-            const leftEdge = grid[x][y][1];
-            // bottom edge depends on the top edge of the cell below check if it exists
-            const bottomEdge = y < nGrid - 1 ? grid[x][y+1][0] : true;
-            // right edge depends on the left edge of the cell to the right check if it exists
-            const rightEdge = x < nGrid - 1 ? grid[x+1][y][1] : true;
+                
+                // if the cell has a top edge draw it
+                if (grid[x][y][0]) {
+                    // draw the top edge of a square
+                    stroke(0);
+                    strokeWeight(wallThickness);
+                    line(x * gridSize, y * gridSize, (x + 1) * gridSize, y * gridSize);
+                }
+                
+                // if the cell has a left edge draw it
+                if (grid[x][y][1]) {
+                    // draw the left edge of a square
+                    stroke(0);
+                    strokeWeight(wallThickness);
+                    line(x * gridSize, y * gridSize, x * gridSize, (y + 1) * gridSize);
+                }
 
-            if (topEdge && leftEdge && bottomEdge && rightEdge) {
-                // draw a black square
-                fill(0);
-                strokeWeight(0);
-                rect(x * gridSize, y * gridSize, gridSize, gridSize);
+                // if the cell has all four both edges fill it in
+                const topEdge = grid[x][y][0];
+                const leftEdge = grid[x][y][1];
+                // bottom edge depends on the top edge of the cell below check if it exists
+                const bottomEdge = y < nGrid - 1 ? grid[x][y+1][0] : true;
+                // right edge depends on the left edge of the cell to the right check if it exists
+                const rightEdge = x < nGrid - 1 ? grid[x+1][y][1] : true;
+
+                if (topEdge && leftEdge && bottomEdge && rightEdge) {
+                    // draw a black square
+                    fill(0);
+                    strokeWeight(0);
+                    rect(x * gridSize, y * gridSize, gridSize, gridSize);
+                }
             }
         }
+        // draw line on the bottom of the canvas
+        stroke(0);
+        strokeWeight(wallThickness);
+        line(0, canvasSize, canvasSize, canvasSize);
+        // draw line on the right of the canvas
+        line(canvasSize, 0, canvasSize, canvasSize);
+        // draw a white line over the bottom edge of the bottom right cell
+        stroke(255);
+        strokeWeight(wallThickness);
+        line(canvasSize - gridSize, canvasSize, canvasSize, canvasSize);
     }
-
-    // draw line on the bottom of the canvas
-    stroke(0);
-    strokeWeight(wallThickness);
-    line(0, canvasSize, canvasSize, canvasSize);
-    // draw line on the right of the canvas
-    line(canvasSize, 0, canvasSize, canvasSize);
-    // draw a white line over the bottom edge of the bottom right cell
-    stroke(255);
-    strokeWeight(wallThickness);
-    line(canvasSize - gridSize, canvasSize, canvasSize, canvasSize);
 
     const r = current.x;
     const c = current.y;
@@ -150,14 +183,15 @@ function draw() {
     // draw the current cell in red
     fill(255, 0, 0, 100);
     strokeWeight(0);
-    rect(current.x * gridSize, current.y * gridSize, gridSize, gridSize);
+    // rect(current.x * gridSize, current.y * gridSize, gridSize, gridSize);
 
     if (next) {
         // draw the next cell in blue
         fill(0, 0, 255, 100);
         strokeWeight(0);
-        rect(next.x * gridSize, next.y * gridSize, gridSize, gridSize);
+        // rect(next.x * gridSize, next.y * gridSize, gridSize, gridSize);
 
+        // update the edges between the current and next cell
         updateEdges(current, next);
         current = next;
     }
