@@ -41,6 +41,9 @@ function setup() {
   const genSlider = document.getElementById('genSpeed');
   const solveSlider = document.getElementById('solveSpeed');
   document.getElementById('solveButton').addEventListener('click', startSolve);
+  document
+    .getElementById('instantGenButton')
+    .addEventListener('click', generateInstant);
   generationSpeed = Number(genSlider.value);
   solverSpeed = Number(solveSlider.value);
   genSlider.addEventListener('input', () => {
@@ -119,6 +122,14 @@ function generateStep() {
     updateEdges(current, next);
     current = next;
   }
+}
+
+function generateInstant() {
+  if (mazeGenerated) return;
+  while (!mazeGenerated) {
+    generateStep();
+  }
+  drawMaze();
 }
 
 // solver helpers ------------------------------------------------------------
