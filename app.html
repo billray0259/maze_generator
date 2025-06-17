@@ -7,6 +7,7 @@
     <title>Maze</title>
     <meta name='viewport' content='width=device-width, initial-scale=1'>
     <script src="https://cdn.jsdelivr.net/npm/p5@1.3.1/lib/p5.js"></script>
+    <script src='search.js'></script>
     <script src='stack.js'></script>
     <script src='main.js'></script>
     
@@ -19,6 +20,7 @@
         <label>Solver Speed: <span id="solveValue">1</span></label>
         <input type="range" id="solveSpeed" min="1" max="10" value="1">
         <button id="solveButton">Solve Maze</button>
+        <button id="instantGenButton">Generate Instantly</button>
     </div>
     <div id='canvas'>
         <main>
